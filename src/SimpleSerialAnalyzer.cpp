@@ -79,6 +79,7 @@ U32 SimpleSerialAnalyzer::GenerateSimulationData( U64 minimum_sample_index, U32 
 		//mSimulationDataGenerator.Initialize( GetSimulationSampleRate(), mSettings.get() );
 		mSimulationInitilized = true;
 	}
+        return 0;
 
 	//return mSimulationDataGenerator.GenerateSimulationData( minimum_sample_index, device_sample_rate, simulation_channels );
 }
