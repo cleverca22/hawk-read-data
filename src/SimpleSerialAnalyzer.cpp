@@ -19,57 +19,52 @@ void SimpleSerialAnalyzer::SetupResults()
 {
 	mResults.reset( new SimpleSerialAnalyzerResults( this, mSettings.get() ) );
 	SetAnalyzerResults( mResults.get() );
-	mResults->AddChannelBubblesWillAppearOn( mSettings->mInputChannel );
+	mResults->AddChannelBubblesWillAppearOn( mSettings->mBit0Chan );
 }
 
 void SimpleSerialAnalyzer::WorkerThread()
 {
 	mSampleRateHz = GetSampleRate();
 
-	mSerial = GetAnalyzerChannelData( mSettings->mInputChannel );
+	mSectorIdx = GetAnalyzerChannelData( mSettings->mSectIdxChan );
+  mBit0 = GetAnalyzerChannelData(mSettings->mBit0Chan);
+  mBit1 = GetAnalyzerChannelData(mSettings->mBit1Chan);
 
-	if( mSerial->GetBitState() == BIT_LOW )
-		mSerial->AdvanceToNextEdge();
+	if( mSectorIdx->GetBitState() == BIT_LOW )
+		mSectorIdx->AdvanceToNextEdge();
 
-	U32 samples_per_bit = mSampleRateHz / mSettings->mBitRate;
-	U32 samples_to_first_center_of_first_data_bit = U32( 1.5 * double( mSampleRateHz ) / double( mSettings->mBitRate ) );
-
-	for( ; ; )
-	{
-		U8 data = 0;
-		U8 mask = 1 << 7;
-		
-		mSerial->AdvanceToNextEdge(); //falling edge -- beginning of the start bit
-
-		U64 starting_sample = mSerial->GetSampleNumber();
-
-		mSerial->Advance( samples_to_first_center_of_first_data_bit );
-
-		for( U32 i=0; i<8; i++ )
-		{
-			//let's put a dot exactly where we sample this bit:
-			mResults->AddMarker( mSerial->GetSampleNumber(), AnalyzerResults::Dot, mSettings->mInputChannel );
-
-			if( mSerial->GetBitState() == BIT_HIGH )
-				data |= mask;
-
-			mSerial->Advance( samples_per_bit );
-
-			mask = mask >> 1;
-		}
+	//U32 samples_per_bit = mSampleRateHz / mSettings->mBitRate;
+	//U32 samples_to_first_center_of_first_data_bit = U32( 1.5 * double( mSampleRateHz ) / double( mSettings->mBitRate ) );
 
 
-		//we have a byte to save. 
-		Frame frame;
-		frame.mData1 = data;
-		frame.mFlags = 0;
-		frame.mStartingSampleInclusive = starting_sample;
-		frame.mEndingSampleInclusive = mSerial->GetSampleNumber();
+  for( ; ; )  {
+    mSectorIdx->AdvanceToNextEdge(); //falling edge -- start of sector
 
-		mResults->AddFrame( frame );
-		mResults->CommitResults();
-		ReportProgress( frame.mEndingSampleInclusive );
-	}
+    U64 starting_sample = mSectorIdx->GetSampleNumber();
+
+    //mSerial->Advance( samples_to_first_center_of_first_data_bit );
+
+    mBit0->AdvanceToAbsPosition(starting_sample);
+    mBit1->AdvanceToAbsPosition(starting_sample);
+    uint8_t sa = 0;
+    if (mBit0->GetBitState() == BIT_LOW) sa |= 1;
+    if (mBit1->GetBitState() == BIT_LOW) sa |= 2;
+
+    mResults->AddMarker(starting_sample, AnalyzerResults::Dot, mSettings->mBit0Chan);
+    mResults->AddMarker(starting_sample, AnalyzerResults::Dot, mSettings->mBit1Chan);
+
+    Frame frame;
+    frame.mData1 = sa;
+    frame.mFlags = 0;
+    frame.mStartingSampleInclusive = starting_sample;
+
+    mSectorIdx->AdvanceToNextEdge();
+    frame.mEndingSampleInclusive = mSectorIdx->GetSampleOfNextEdge();
+
+    mResults->AddFrame(frame);
+    mResults->CommitResults();
+    ReportProgress(frame.mEndingSampleInclusive);
+  }
 }
 
 bool SimpleSerialAnalyzer::NeedsRerun()
@@ -81,26 +76,26 @@ U32 SimpleSerialAnalyzer::GenerateSimulationData( U64 minimum_sample_index, U32 
 {
 	if( mSimulationInitilized == false )
 	{
-		mSimulationDataGenerator.Initialize( GetSimulationSampleRate(), mSettings.get() );
+		//mSimulationDataGenerator.Initialize( GetSimulationSampleRate(), mSettings.get() );
 		mSimulationInitilized = true;
 	}
 
-	return mSimulationDataGenerator.GenerateSimulationData( minimum_sample_index, device_sample_rate, simulation_channels );
+	//return mSimulationDataGenerator.GenerateSimulationData( minimum_sample_index, device_sample_rate, simulation_channels );
 }
 
 U32 SimpleSerialAnalyzer::GetMinimumSampleRateHz()
 {
-	return mSettings->mBitRate * 4;
+  return 100000;
 }
 
 const char* SimpleSerialAnalyzer::GetAnalyzerName() const
 {
-	return "Simple Serial";
+	return "Hawk - Sector Addr 2";
 }
 
 const char* GetAnalyzerName()
 {
-	return "Simple Serial";
+	return "Hawk - Sector Addr";
 }
 
 Analyzer* CreateAnalyzer()

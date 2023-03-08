@@ -15,13 +15,13 @@ public:
 	virtual void LoadSettings( const char* settings );
 	virtual const char* SaveSettings();
 
-	
-	Channel mInputChannel;
-	U32 mBitRate;
+  Channel mBit0Chan, mBit1Chan, mSectIdxChan;
 
 protected:
-	std::auto_ptr< AnalyzerSettingInterfaceChannel >	mInputChannelInterface;
-	std::auto_ptr< AnalyzerSettingInterfaceInteger >	mBitRateInterface;
+  std::unique_ptr<AnalyzerSettingInterfaceChannel> mBit0;
+  std::unique_ptr<AnalyzerSettingInterfaceChannel> mBit1;
+  std::unique_ptr<AnalyzerSettingInterfaceChannel> mSectorIndex;
+  //std::unique_ptr< AnalyzerSettingInterfaceInteger >	mBitRateInterface;
 };
 
 #endif //SIMPLESERIAL_ANALYZER_SETTINGS

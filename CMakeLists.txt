@@ -19,8 +19,8 @@ src/SimpleSerialAnalyzerResults.cpp
 src/SimpleSerialAnalyzerResults.h
 src/SimpleSerialAnalyzerSettings.cpp
 src/SimpleSerialAnalyzerSettings.h
-src/SimpleSerialSimulationDataGenerator.cpp
-src/SimpleSerialSimulationDataGenerator.h
+#src/SimpleSerialSimulationDataGenerator.cpp
+#src/SimpleSerialSimulationDataGenerator.h
 )
 
 add_analyzer_plugin(${PROJECT_NAME} SOURCES ${SOURCES})

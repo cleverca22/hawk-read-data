@@ -3,7 +3,7 @@
 
 #include <Analyzer.h>
 #include "SimpleSerialAnalyzerResults.h"
-#include "SimpleSerialSimulationDataGenerator.h"
+//#include "SimpleSerialSimulationDataGenerator.h"
 
 class SimpleSerialAnalyzerSettings;
 class ANALYZER_EXPORT SimpleSerialAnalyzer : public Analyzer2
@@ -22,11 +22,11 @@ public:
 	virtual bool NeedsRerun();
 
 protected: //vars
-	std::auto_ptr< SimpleSerialAnalyzerSettings > mSettings;
-	std::auto_ptr< SimpleSerialAnalyzerResults > mResults;
-	AnalyzerChannelData* mSerial;
+	std::unique_ptr< SimpleSerialAnalyzerSettings > mSettings;
+	std::unique_ptr< SimpleSerialAnalyzerResults > mResults;
+	AnalyzerChannelData *mSectorIdx, *mBit0, *mBit1;
 
-	SimpleSerialSimulationDataGenerator mSimulationDataGenerator;
+	//SimpleSerialSimulationDataGenerator mSimulationDataGenerator;
 	bool mSimulationInitilized;
 
 	//Serial analysis vars:
