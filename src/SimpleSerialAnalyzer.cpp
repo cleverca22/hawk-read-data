@@ -15,54 +15,122 @@ SimpleSerialAnalyzer::~SimpleSerialAnalyzer()
 	KillThread();
 }
 
-void SimpleSerialAnalyzer::SetupResults()
-{
-	mResults.reset( new SimpleSerialAnalyzerResults( this, mSettings.get() ) );
-	SetAnalyzerResults( mResults.get() );
-	mResults->AddChannelBubblesWillAppearOn( mSettings->mBit0Chan );
+void SimpleSerialAnalyzer::SetupResults() {
+  mResults.reset( new SimpleSerialAnalyzerResults( this, mSettings.get() ) );
+  SetAnalyzerResults( mResults.get() );
+  mResults->AddChannelBubblesWillAppearOn( mSettings->mReadDataChan );
 }
 
-void SimpleSerialAnalyzer::WorkerThread()
-{
-	mSampleRateHz = GetSampleRate();
+void SimpleSerialAnalyzer::WorkerThread() {
+  mSampleRateHz = GetSampleRate();
 
-	mSectorIdx = GetAnalyzerChannelData( mSettings->mSectIdxChan );
-  mBit0 = GetAnalyzerChannelData(mSettings->mBit0Chan);
-  mBit1 = GetAnalyzerChannelData(mSettings->mBit1Chan);
+  mReadClock = GetAnalyzerChannelData(mSettings->mReadClockChan);
+  mReadData = GetAnalyzerChannelData(mSettings->mReadDataChan);
+  mReadGate = GetAnalyzerChannelData(mSettings->mReadGateChan);
 
-	if( mSectorIdx->GetBitState() == BIT_LOW )
-		mSectorIdx->AdvanceToNextEdge();
+  if( mReadClock->GetBitState() == BIT_LOW ) mReadClock->AdvanceToNextEdge();
 
 	//U32 samples_per_bit = mSampleRateHz / mSettings->mBitRate;
 	//U32 samples_to_first_center_of_first_data_bit = U32( 1.5 * double( mSampleRateHz ) / double( mSettings->mBitRate ) );
 
+  bool waiting_for_sync_end = true;
+  U64 sync_start = 0;
+  int bits = 0;
+  uint16_t byte = 0;
+  U64 byte_start = 0;
+  bool addr = true;
 
+  mReadClock->AdvanceToNextEdge(); //falling edge -- start of bit
   for( ; ; )  {
-    mSectorIdx->AdvanceToNextEdge(); //falling edge -- start of sector
+    U64 starting_sample = mReadClock->GetSampleNumber();
+    if (sync_start == 0) sync_start = starting_sample;
+    if (byte_start == 0) byte_start = starting_sample;
 
-    U64 starting_sample = mSectorIdx->GetSampleNumber();
+    mReadClock->AdvanceToNextEdge(); // rising edge
+    U64 rising_edge = mReadClock->GetSampleNumber();
+
+    mReadClock->AdvanceToNextEdge(); // falling edge
+    U64 next_start = mReadClock->GetSampleNumber();
+
+    U64 bit_length_samples = next_start - starting_sample;
+    double bit_length = (((double)bit_length_samples) / mSampleRateHz) * 1000 * 1000 * 1000;
+
+    mReadGate->AdvanceToAbsPosition(next_start);
+    if ((mReadGate->GetBitState() == BIT_HIGH) || (bit_length > 800)) {
+      waiting_for_sync_end = true;
+      sync_start = 0;
+      byte_start = 0;
+      addr = !addr;
+      continue;
+    }
+
+    U64 sample_point = rising_edge + ((next_start - rising_edge)/2);
+
+    mReadData->AdvanceToAbsPosition(sample_point);
+
+    bool bit = mReadData->GetBitState() == BIT_LOW;
+
+    if (!waiting_for_sync_end) {
+      if (addr) {
+        if (bit) {
+          byte = (byte >> 1) | 0x8000;
+        } else {
+          byte = (byte >> 1);
+        }
+      } else {
+        if (bit) {
+          byte = (byte << 1) | 0x1;
+        } else {
+          byte = (byte << 1);
+        }
+      }
+      bits++;
+      if ((addr && (bits == 16) || (!addr && (bits == 8)))) {
+        Frame f;
+        f.mData1 = byte;
+        //if (!addr) f.mData1 &= 0x7f;
+        f.mFlags = 0;
+        f.mStartingSampleInclusive = byte_start;
+        f.mEndingSampleInclusive = sample_point;
+        //if (addr) {
+          mResults->AddFrame(f);
+          mResults->CommitResults();
+        //}
+        bits = 0;
+        byte = 0;
+        byte_start = 0;
+      }
+    }
+
+    if (bit && waiting_for_sync_end) {
+      // end of sync
+      //mResults->GenerateBubbleText(sample_point, mSettings->mReadDataChan, 
+      //FrameV2 f;
+      //f.AddString("symbol", "sync");
+      //mResults->AddFrameV2(f, "symbol", sync_start, sample_point);
+      //mResults->CommitResults();
+      waiting_for_sync_end = false;
+      bits = 0;
+      byte = 0;
+      byte_start = 0;
+    }
+
+    enum AnalyzerResults::MarkerType m = bit ? AnalyzerResults::One : AnalyzerResults::Zero;
+    mResults->AddMarker(sample_point, m, mSettings->mReadDataChan);
+
+    //mReadClock->AdvanceToAbsPosition(next_start - 2);
 
     //mSerial->Advance( samples_to_first_center_of_first_data_bit );
 
-    mBit0->AdvanceToAbsPosition(starting_sample);
-    mBit1->AdvanceToAbsPosition(starting_sample);
-    uint8_t sa = 0;
-    if (mBit0->GetBitState() == BIT_LOW) sa |= 1;
-    if (mBit1->GetBitState() == BIT_LOW) sa |= 2;
-
-    mResults->AddMarker(starting_sample, AnalyzerResults::Dot, mSettings->mBit0Chan);
-    mResults->AddMarker(starting_sample, AnalyzerResults::Dot, mSettings->mBit1Chan);
-
     Frame frame;
-    frame.mData1 = sa;
+    frame.mData1 = bit;
     frame.mFlags = 0;
     frame.mStartingSampleInclusive = starting_sample;
 
-    mSectorIdx->AdvanceToNextEdge();
-    frame.mEndingSampleInclusive = mSectorIdx->GetSampleOfNextEdge();
+    frame.mEndingSampleInclusive = next_start;
 
-    mResults->AddFrame(frame);
-    mResults->CommitResults();
+    //mResults->AddFrame(frame);
+    //mResults->CommitResults();
     ReportProgress(frame.mEndingSampleInclusive);
   }
 }
@@ -86,17 +154,17 @@ U32 SimpleSerialAnalyzer::GenerateSimulationData( U64 minimum_sample_index, U32 
 
 U32 SimpleSerialAnalyzer::GetMinimumSampleRateHz()
 {
-  return 100000;
+  return 5000000;
 }
 
 const char* SimpleSerialAnalyzer::GetAnalyzerName() const
 {
-	return "Hawk - Sector Addr 2";
+	return "Hawk - Read data 2";
 }
 
 const char* GetAnalyzerName()
 {
-	return "Hawk - Sector Addr";
+	return "Hawk - Read data";
 }
 
 Analyzer* CreateAnalyzer()

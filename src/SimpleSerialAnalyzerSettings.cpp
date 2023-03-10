@@ -3,21 +3,21 @@
 
 
 SimpleSerialAnalyzerSettings::SimpleSerialAnalyzerSettings()
-  : mBit0Chan(UNDEFINED_CHANNEL),
-  mBit1Chan(UNDEFINED_CHANNEL),
-  mSectIdxChan(UNDEFINED_CHANNEL)
+  : mReadClockChan(UNDEFINED_CHANNEL),
+  mReadDataChan(UNDEFINED_CHANNEL),
+  mReadGateChan(UNDEFINED_CHANNEL)
 {
-  mBit0.reset(new AnalyzerSettingInterfaceChannel());
-  mBit1.reset(new AnalyzerSettingInterfaceChannel());
-  mSectorIndex.reset(new AnalyzerSettingInterfaceChannel());
+  mReadClock.reset(new AnalyzerSettingInterfaceChannel());
+  mReadData.reset(new AnalyzerSettingInterfaceChannel());
+  mReadGate.reset(new AnalyzerSettingInterfaceChannel());
 
-  mBit0->SetTitleAndTooltip("SA0", "Sector address 0");
-  mBit1->SetTitleAndTooltip("SA1", "Sector address 1");
-  mSectorIndex->SetTitleAndTooltip("Sector Idx", "Sector index");
+  mReadClock->SetTitleAndTooltip("Read Clock", "Hawk read clock");
+  mReadData->SetTitleAndTooltip("Read Data", "Hawk read data");
+  mReadGate->SetTitleAndTooltip("Read Gate", "Hawk read gate");
 
-  mBit0->SetChannel(mBit0Chan);
-  mBit1->SetChannel(mBit1Chan);
-  mSectorIndex->SetChannel(mSectIdxChan);
+  mReadClock->SetChannel(mReadClockChan);
+  mReadData->SetChannel(mReadDataChan);
+  mReadGate->SetChannel(mReadGateChan);
 
 	//mBitRateInterface.reset( new AnalyzerSettingInterfaceInteger() );
 	//mBitRateInterface->SetTitleAndTooltip( "Bit Rate (Bits/S)",  "Specify the bit rate in bits per second." );
@@ -25,19 +25,19 @@ SimpleSerialAnalyzerSettings::SimpleSerialAnalyzerSettings()
 	//mBitRateInterface->SetMin( 1 );
 	//mBitRateInterface->SetInteger( mBitRate );
 
-  AddInterface(mBit0.get());
-  AddInterface(mBit1.get());
-  AddInterface(mSectorIndex.get());
+  AddInterface(mReadClock.get());
+  AddInterface(mReadData.get());
+  AddInterface(mReadGate.get());
 	//AddInterface( mBitRateInterface.get() );
 
 	AddExportOption( 0, "Export as text/csv file" );
 	AddExportExtension( 0, "text", "txt" );
 	AddExportExtension( 0, "csv", "csv" );
 
-	ClearChannels();
-  AddChannel(mBit0Chan, "Simple Serial1", true );
-  AddChannel(mBit1Chan, "Simple Serial2", true );
-  AddChannel(mSectIdxChan, "Simple Serial3", true );
+  ClearChannels();
+  AddChannel(mReadClockChan, "Hawk read clock", true);
+  AddChannel(mReadDataChan, "Hawk read data", true);
+  AddChannel(mReadGateChan, "Hawk read gate", true);
 }
 
 SimpleSerialAnalyzerSettings::~SimpleSerialAnalyzerSettings()
@@ -46,39 +46,38 @@ SimpleSerialAnalyzerSettings::~SimpleSerialAnalyzerSettings()
 
 bool SimpleSerialAnalyzerSettings::SetSettingsFromInterfaces()
 {
-  mBit0Chan = mBit0->GetChannel();
-  mBit1Chan = mBit1->GetChannel();
-  mSectIdxChan = mSectorIndex->GetChannel();
+  mReadClockChan = mReadClock->GetChannel();
+  mReadDataChan = mReadData->GetChannel();
+  mReadGateChan = mReadGate->GetChannel();
 
   ClearChannels();
-  AddChannel(mBit0Chan, "Simple Serial1", true );
-  AddChannel(mBit1Chan, "Simple Serial2", true );
-  AddChannel(mSectIdxChan, "Simple Serial3", true );
+  AddChannel(mReadClockChan, "Hawk read clock", true);
+  AddChannel(mReadDataChan, "Hawk read data", true);
+  AddChannel(mReadGateChan, "Hawk read gate", true);
 
-	return true;
+  return true;
 }
 
 void SimpleSerialAnalyzerSettings::UpdateInterfacesFromSettings()
 {
-	//mBitRateInterface->SetInteger( mBitRate );
-  mBit0->SetChannel(mBit0Chan);
-  mBit1->SetChannel(mBit1Chan);
-  mSectorIndex->SetChannel(mSectIdxChan);
+  //mBitRateInterface->SetInteger( mBitRate );
+  mReadClock->SetChannel(mReadClockChan);
+  mReadData->SetChannel(mReadDataChan);
+  mReadGate->SetChannel(mReadGateChan);
 }
 
 void SimpleSerialAnalyzerSettings::LoadSettings( const char* settings ) {
   SimpleArchive text_archive;
   text_archive.SetString( settings );
 
-  text_archive >> mBit0Chan;
-  text_archive >> mBit1Chan;
-  text_archive >> mSectIdxChan;
-
+  text_archive >> mReadClockChan;
+  text_archive >> mReadDataChan;
+  text_archive >> mReadGateChan;
 
   ClearChannels();
-  AddChannel(mBit0Chan, "Simple Serial1", true );
-  AddChannel(mBit1Chan, "Simple Serial2", true );
-  AddChannel(mSectIdxChan, "Simple Serial3", true );
+  AddChannel(mReadClockChan, "Hawk read clock", true);
+  AddChannel(mReadDataChan, "Hawk read data", true);
+  AddChannel(mReadGateChan, "Hawk read gate", true);
 
   UpdateInterfacesFromSettings();
 }
@@ -86,9 +85,9 @@ void SimpleSerialAnalyzerSettings::LoadSettings( const char* settings ) {
 const char* SimpleSerialAnalyzerSettings::SaveSettings() {
   SimpleArchive text_archive;
 
-  text_archive << mBit0Chan;
-  text_archive << mBit1Chan;
-  text_archive << mSectIdxChan;
+  text_archive << mReadClockChan;
+  text_archive << mReadDataChan;
+  text_archive << mReadGateChan;
 
   return SetReturnString( text_archive.GetString() );
 }

@@ -24,7 +24,7 @@ public:
 protected: //vars
 	std::unique_ptr< SimpleSerialAnalyzerSettings > mSettings;
 	std::unique_ptr< SimpleSerialAnalyzerResults > mResults;
-	AnalyzerChannelData *mSectorIdx, *mBit0, *mBit1;
+  AnalyzerChannelData *mReadClock, *mReadData, *mReadGate;
 
 	//SimpleSerialSimulationDataGenerator mSimulationDataGenerator;
 	bool mSimulationInitilized;

@@ -15,12 +15,12 @@ public:
 	virtual void LoadSettings( const char* settings );
 	virtual const char* SaveSettings();
 
-  Channel mBit0Chan, mBit1Chan, mSectIdxChan;
+  Channel mReadClockChan, mReadDataChan, mReadGateChan;
 
 protected:
-  std::unique_ptr<AnalyzerSettingInterfaceChannel> mBit0;
-  std::unique_ptr<AnalyzerSettingInterfaceChannel> mBit1;
-  std::unique_ptr<AnalyzerSettingInterfaceChannel> mSectorIndex;
+  std::unique_ptr<AnalyzerSettingInterfaceChannel> mReadClock;
+  std::unique_ptr<AnalyzerSettingInterfaceChannel> mReadData;
+  std::unique_ptr<AnalyzerSettingInterfaceChannel> mReadGate;
   //std::unique_ptr< AnalyzerSettingInterfaceInteger >	mBitRateInterface;
 };
 
