@@ -91,7 +91,7 @@ void SimpleSerialAnalyzer::WorkerThread() {
         //if (!addr) f.mData1 &= 0x7f;
         f.mFlags = 0;
         f.mStartingSampleInclusive = byte_start;
-        f.mEndingSampleInclusive = sample_point;
+        f.mEndingSampleInclusive = next_start;
         //if (addr) {
           mResults->AddFrame(f);
           mResults->CommitResults();
